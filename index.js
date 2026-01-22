@@ -1,4 +1,5 @@
 import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion } from "@whiskeysockets/baileys";
+import qrcode from "qrcode-terminal";
 
 // 👑 Your WhatsApp number
 const owners = ["923035698438"];
@@ -18,8 +19,29 @@ const startBot = async () => {
     auth: state,
   });
 
+  // Save credentials automatically
   sock.ev.on("creds.update", saveCreds);
 
+  // ✅ Handle QR codes manually
+  sock.ev.on("connection.update", (update) => {
+    const { qr, connection, lastDisconnect } = update;
+
+    if (qr) {
+      // Print scannable QR in terminal
+      qrcode.generate(qr, { small: true });
+      console.log("Scan this QR with WhatsApp to login.");
+    }
+
+    if (connection === "open") {
+      console.log("✅ Bot is connected!");
+    }
+
+    if (connection === "close") {
+      console.log("❌ Connection closed:", lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error);
+    }
+  });
+
+  // 🔹 Listen for messages
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const m = messages[0];
     if (!m.message) return;
@@ -65,4 +87,4 @@ const startBot = async () => {
   });
 };
 
-startBot();
+startBot().catch(err => console.log("❌ Error starting bot:", err));
